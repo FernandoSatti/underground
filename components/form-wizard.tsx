@@ -741,13 +741,12 @@ export default function FormWizard() {
               ].map((instrument) => (
                 <div
                   key={instrument.id}
-                  className={`border rounded-lg p-4 flex flex-col items-center cursor-pointer transition-all ${
-                    (classType === "kids" ? students[0]?.instruments : students[currentStudent]?.instruments)?.includes(
-                      instrument.value,
-                    )
+                  className={`border rounded-lg p-4 flex flex-col items-center cursor-pointer transition-all ${(classType === "kids" ? students[0]?.instruments : students[currentStudent]?.instruments)?.includes(
+                    instrument.value,
+                  )
                       ? "border-[#01b302] bg-[#01ef4a]/10"
                       : "border-gray-200 hover:border-[#01ef4a]"
-                  }`}
+                    }`}
                   onClick={() => toggleInstrument(instrument.value)}
                 >
                   <span>{instrument.label}</span>
@@ -780,14 +779,13 @@ export default function FormWizard() {
               ].map((time) => (
                 <div
                   key={time.id}
-                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${
-                    (classType === "kids"
+                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${(classType === "kids"
                       ? students[0]?.timePreferences
                       : students[currentStudent]?.timePreferences
                     )?.includes(time.value)
                       ? "border-[#01b302] bg-[#01ef4a]/10"
                       : "border-gray-200 hover:border-[#01ef4a]"
-                  }`}
+                    }`}
                   onClick={() => toggleTimePreference(time.value)}
                 >
                   <span>{time.label}</span>
@@ -822,13 +820,12 @@ export default function FormWizard() {
               ].map((day) => (
                 <div
                   key={day.id}
-                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${
-                    (classType === "kids" ? students[0]?.weekdays : students[currentStudent]?.weekdays)?.includes(
-                      day.value,
-                    )
+                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${(classType === "kids" ? students[0]?.weekdays : students[currentStudent]?.weekdays)?.includes(
+                    day.value,
+                  )
                       ? "border-[#01b302] bg-[#01ef4a]/10"
                       : "border-gray-200 hover:border-[#01ef4a]"
-                  }`}
+                    }`}
                   onClick={() => toggleWeekday(day.value)}
                 >
                   <Checkbox
@@ -1021,7 +1018,7 @@ export default function FormWizard() {
           />
         </div>
 
-        <h2 className="text-2xl font-bold text-center">UNDERGROUND 🎵</h2>
+        {/*<h2 className="text-2xl font-bold text-center">UNDERGROUND 🎵</h2>*/}
         <p className="text-center font-medium">Escuela de Música y Salas de Ensayo</p>
 
         <div className="space-y-3">
@@ -1047,8 +1044,8 @@ export default function FormWizard() {
           </div>
 
           <div className="space-y-2">
-            <p className="font-bold text-center">🎯 CLASES PERSONALIZADAS</p>
-            <p className="text-center text-sm">Adaptadas a las edades y gustos musicales de cada alumno.</p>
+            <p className="font-bold text-center">👨‍🎓 CLASES INDIVIDUALES</p>
+            <p className="text-center text-sm">Se pueden recuperar si se avisa con anticipación</p>
           </div>
         </div>
       </div>
@@ -1084,47 +1081,47 @@ export default function FormWizard() {
             step === 5 ||
             step === 6 ||
             step === 8) && (
-            <Button
-              onClick={() => {
-                if (step === 6) {
-                  if (classType === "group") {
-                    setShowAddPerson(true)
-                    setStep(7)
+              <Button
+                onClick={() => {
+                  if (step === 6) {
+                    if (classType === "group") {
+                      setShowAddPerson(true)
+                      setStep(7)
+                    } else {
+                      setStep(7)
+                    }
                   } else {
-                    setStep(7)
+                    nextStep()
                   }
-                } else {
-                  nextStep()
+                }}
+                className="bg-[#01b302] hover:bg-[#01ef4a] hover:text-black h-10 ml-auto"
+                disabled={
+                  (step === 1 &&
+                    classType === "kids" &&
+                    (!tutorData.name || !tutorData.studentName || !tutorData.studentAge)) ||
+                  (step === 1 && classType !== "kids" && !mainName) ||
+                  (step === 3 &&
+                    ((!(isForSelf && currentStudent === 0) && !students[currentStudent]?.name) ||
+                      !students[currentStudent]?.age)) ||
+                  (step === 8 && (!students[currentStudent]?.name || !students[currentStudent]?.age)) ||
+                  (step === 4 &&
+                    (classType === "kids"
+                      ? (students[0]?.instruments?.length || 0) === 0
+                      : (students[currentStudent]?.instruments?.length || 0) === 0)) ||
+                  (step === 5 &&
+                    (classType === "kids"
+                      ? (students[0]?.timePreferences?.length || 0) === 0
+                      : (students[currentStudent]?.timePreferences?.length || 0) === 0)) ||
+                  (step === 6 &&
+                    (classType === "kids"
+                      ? (students[0]?.weekdays?.length || 0) === 0
+                      : (students[currentStudent]?.weekdays?.length || 0) === 0))
                 }
-              }}
-              className="bg-[#01b302] hover:bg-[#01ef4a] hover:text-black h-10 ml-auto"
-              disabled={
-                (step === 1 &&
-                  classType === "kids" &&
-                  (!tutorData.name || !tutorData.studentName || !tutorData.studentAge)) ||
-                (step === 1 && classType !== "kids" && !mainName) ||
-                (step === 3 &&
-                  ((!(isForSelf && currentStudent === 0) && !students[currentStudent]?.name) ||
-                    !students[currentStudent]?.age)) ||
-                (step === 8 && (!students[currentStudent]?.name || !students[currentStudent]?.age)) ||
-                (step === 4 &&
-                  (classType === "kids"
-                    ? (students[0]?.instruments?.length || 0) === 0
-                    : (students[currentStudent]?.instruments?.length || 0) === 0)) ||
-                (step === 5 &&
-                  (classType === "kids"
-                    ? (students[0]?.timePreferences?.length || 0) === 0
-                    : (students[currentStudent]?.timePreferences?.length || 0) === 0)) ||
-                (step === 6 &&
-                  (classType === "kids"
-                    ? (students[0]?.weekdays?.length || 0) === 0
-                    : (students[currentStudent]?.weekdays?.length || 0) === 0))
-              }
-            >
-              {step === 6 ? "Finalizar" : step === 8 ? "Aceptar" : "Siguiente"}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          )}
+              >
+                {step === 6 ? "Finalizar" : step === 8 ? "Aceptar" : "Siguiente"}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
         </div>
       </div>
     )
