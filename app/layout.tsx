@@ -25,5 +25,5 @@ export default function RootLayout({
 }
 
 export const metadata = {
-      generator: 'fernando.satti'
+      generator: 'v0.dev'
     };
