@@ -626,7 +626,8 @@ export default function FormWizard() {
                 onClick={() => handleForSelfSelect(true)}
               >
                 <div className="flex flex-col items-center">
-                  <span>🙋‍♂️ Para mí</span>
+                  <span>🙋‍♂️</span>
+                  <span>Para mí</span>
                 </div>
               </Button>
               <Button
@@ -635,7 +636,8 @@ export default function FormWizard() {
                 onClick={() => handleForSelfSelect(false)}
               >
                 <div className="flex flex-col items-center">
-                  <span>👤 Para otra persona</span>
+                  <span>👤</span>
+                  <span>Para otra persona</span>
                 </div>
               </Button>
             </div>
