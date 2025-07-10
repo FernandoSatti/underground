@@ -6,7 +6,6 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, ArrowRight, Info, Send } from "lucide-react"
 import Image from "next/image"
 
@@ -41,14 +40,16 @@ export default function FormWizard() {
   const [isForSelf, setIsForSelf] = useState<boolean | null>(null)
   const [currentStudent, setCurrentStudent] = useState(0)
   const [students, setStudents] = useState<StudentData[]>([])
-  const [tutorData, setTutorData] = useState<TutorData>({ name: "", studentName: "", studentAge: "" }) // Para kids
+  const [tutorData, setTutorData] = useState<TutorData>({ name: "", studentName: "", studentAge: "" })
   const [showInfo, setShowInfo] = useState(false)
   const [nameError, setNameError] = useState(false)
   const [ageError, setAgeError] = useState(false)
   const [studentNameError, setStudentNameError] = useState(false)
   const [studentAgeError, setStudentAgeError] = useState(false)
-  const [showAddPerson, setShowAddPerson] = useState(false) // Para mostrar opciones de agregar persona
-  const [groupMode, setGroupMode] = useState<"same" | "different" | null>(null) // Para recordar la modalidad elegida
+  const [showAddPerson, setShowAddPerson] = useState(false)
+  const [addingPersonMode, setAddingPersonMode] = useState<"same" | "different" | null>(null)
+  const [tempPerson, setTempPerson] = useState<StudentData | null>(null)
+  const [lastChosenMode, setLastChosenMode] = useState<"same" | "different" | null>(null)
 
   // Función para resetear el formulario
   const resetForm = () => {
@@ -65,7 +66,9 @@ export default function FormWizard() {
     setStudentNameError(false)
     setStudentAgeError(false)
     setShowAddPerson(false)
-    setGroupMode(null)
+    setAddingPersonMode(null)
+    setTempPerson(null)
+    setLastChosenMode(null) // Resetear la elección previa
   }
 
   // Función para inicializar datos de estudiantes
@@ -85,7 +88,6 @@ export default function FormWizard() {
   // Función para manejar selección de tipo de clase con auto-avance
   const handleClassTypeSelect = (type: ClassType) => {
     setClassType(type)
-    // Auto-avance después de un pequeño delay
     setTimeout(() => {
       if (type === "group") {
         initializeStudents(1)
@@ -100,9 +102,7 @@ export default function FormWizard() {
   // Función para manejar "para mí" / "para otra persona" con auto-avance condicional
   const handleForSelfSelect = (forSelf: boolean) => {
     setIsForSelf(forSelf)
-
     setTimeout(() => {
-      // Inicializar estudiantes
       initializeStudents(1)
       if (forSelf) {
         const studentWithMainName = {
@@ -118,18 +118,27 @@ export default function FormWizard() {
     }, 300)
   }
 
-  // Función para actualizar datos del estudiante actual
+  // Función para obtener el estudiante actual (puede ser tempPerson o del array students)
+  const getCurrentStudent = (): StudentData => {
+    if (tempPerson) {
+      return tempPerson
+    }
+    return students[currentStudent] || { name: "", age: "", instruments: [], timePreferences: [], weekdays: [] }
+  }
+
+  // Función para actualizar el estudiante actual
   const updateCurrentStudent = (data: Partial<StudentData>) => {
-    const updatedStudents = [...students]
-    if (updatedStudents[currentStudent]) {
-      updatedStudents[currentStudent] = {
-        ...updatedStudents[currentStudent],
-        ...data,
+    if (tempPerson) {
+      setTempPerson({ ...tempPerson, ...data })
+    } else {
+      const updatedStudents = [...students]
+      if (updatedStudents[currentStudent]) {
+        updatedStudents[currentStudent] = { ...updatedStudents[currentStudent], ...data }
+        setStudents(updatedStudents)
       }
-      setStudents(updatedStudents)
     }
 
-    // Resetear errores cuando se ingresan datos
+    // Resetear errores
     if (data.name) setNameError(false)
     if (data.age) setAgeError(false)
   }
@@ -139,28 +148,19 @@ export default function FormWizard() {
     if (classType === "kids") {
       const currentInstruments = students[0]?.instruments || []
       if (currentInstruments.includes(instrument)) {
-        const newStudent = {
-          ...students[0],
-          instruments: currentInstruments.filter((i) => i !== instrument),
-        }
+        const newStudent = { ...students[0], instruments: currentInstruments.filter((i) => i !== instrument) }
         setStudents([newStudent])
       } else {
-        const newStudent = {
-          ...students[0],
-          instruments: [...currentInstruments, instrument],
-        }
+        const newStudent = { ...students[0], instruments: [...currentInstruments, instrument] }
         setStudents([newStudent])
       }
     } else {
-      const currentInstruments = students[currentStudent]?.instruments || []
+      const currentStudent = getCurrentStudent()
+      const currentInstruments = currentStudent.instruments || []
       if (currentInstruments.includes(instrument)) {
-        updateCurrentStudent({
-          instruments: currentInstruments.filter((i) => i !== instrument),
-        })
+        updateCurrentStudent({ instruments: currentInstruments.filter((i) => i !== instrument) })
       } else {
-        updateCurrentStudent({
-          instruments: [...currentInstruments, instrument],
-        })
+        updateCurrentStudent({ instruments: [...currentInstruments, instrument] })
       }
     }
   }
@@ -170,28 +170,19 @@ export default function FormWizard() {
     if (classType === "kids") {
       const currentTimes = students[0]?.timePreferences || []
       if (currentTimes.includes(time)) {
-        const newStudent = {
-          ...students[0],
-          timePreferences: currentTimes.filter((t) => t !== time),
-        }
+        const newStudent = { ...students[0], timePreferences: currentTimes.filter((t) => t !== time) }
         setStudents([newStudent])
       } else {
-        const newStudent = {
-          ...students[0],
-          timePreferences: [...currentTimes, time],
-        }
+        const newStudent = { ...students[0], timePreferences: [...currentTimes, time] }
         setStudents([newStudent])
       }
     } else {
-      const currentTimes = students[currentStudent]?.timePreferences || []
+      const currentStudent = getCurrentStudent()
+      const currentTimes = currentStudent.timePreferences || []
       if (currentTimes.includes(time)) {
-        updateCurrentStudent({
-          timePreferences: currentTimes.filter((t) => t !== time),
-        })
+        updateCurrentStudent({ timePreferences: currentTimes.filter((t) => t !== time) })
       } else {
-        updateCurrentStudent({
-          timePreferences: [...currentTimes, time],
-        })
+        updateCurrentStudent({ timePreferences: [...currentTimes, time] })
       }
     }
   }
@@ -201,53 +192,44 @@ export default function FormWizard() {
     if (classType === "kids") {
       const currentDays = students[0]?.weekdays || []
       if (currentDays.includes(day)) {
-        const newStudent = {
-          ...students[0],
-          weekdays: currentDays.filter((d) => d !== day),
-        }
+        const newStudent = { ...students[0], weekdays: currentDays.filter((d) => d !== day) }
         setStudents([newStudent])
       } else {
-        const newStudent = {
-          ...students[0],
-          weekdays: [...currentDays, day],
-        }
+        const newStudent = { ...students[0], weekdays: [...currentDays, day] }
         setStudents([newStudent])
       }
     } else {
-      const currentDays = students[currentStudent]?.weekdays || []
+      const currentStudent = getCurrentStudent()
+      const currentDays = currentStudent.weekdays || []
       if (currentDays.includes(day)) {
-        updateCurrentStudent({
-          weekdays: currentDays.filter((d) => d !== day),
-        })
+        updateCurrentStudent({ weekdays: currentDays.filter((d) => d !== day) })
       } else {
-        updateCurrentStudent({
-          weekdays: [...currentDays, day],
-        })
+        updateCurrentStudent({ weekdays: [...currentDays, day] })
       }
     }
   }
 
   // Función para agregar persona al mismo grupo
   const addPersonSameGroup = () => {
-    if (students.length >= 3) return // Máximo 3 personas
+    if (students.length >= 3) return
 
     const newPerson = {
       name: "",
       age: "",
-      instruments: students[0]?.instruments || [], // Mismos instrumentos
-      timePreferences: students[0]?.timePreferences || [], // Mismos horarios
-      weekdays: students[0]?.weekdays || [], // Mismos días
+      instruments: students[0]?.instruments || [],
+      timePreferences: students[0]?.timePreferences || [],
+      weekdays: students[0]?.weekdays || [],
     }
-    setStudents([...students, newPerson])
-    setCurrentStudent(students.length)
+    setTempPerson(newPerson)
+    setAddingPersonMode("same")
+    setLastChosenMode("same") // Recordar la elección
     setShowAddPerson(false)
-    setGroupMode("same") // Recordar que eligió mismo grupo
-    setStep(8) // Paso para nombre y edad solamente
+    setStep(8) // Ir al paso de solo nombre y edad
   }
 
   // Función para agregar persona a otro grupo
   const addPersonNewGroup = () => {
-    if (students.length >= 3) return // Máximo 3 personas
+    if (students.length >= 3) return
 
     const newPerson = {
       name: "",
@@ -256,17 +238,27 @@ export default function FormWizard() {
       timePreferences: [],
       weekdays: [],
     }
-    setStudents([...students, newPerson])
-    setCurrentStudent(students.length)
+    setTempPerson(newPerson)
+    setAddingPersonMode("different")
+    setLastChosenMode("different") // Recordar la elección
     setShowAddPerson(false)
-    setGroupMode("different") // Recordar que eligió otro grupo
-    setStep(3) // Volver al flujo completo
+    setStep(3) // Ir al flujo completo
+  }
+
+  // Función para confirmar y agregar la persona temporal al array final
+  const confirmAddPerson = () => {
+    if (tempPerson) {
+      const newStudents = [...students, tempPerson]
+      setStudents(newStudents)
+      setTempPerson(null)
+      setAddingPersonMode(null)
+      setStep(7) // Volver al resumen
+    }
   }
 
   const nextStep = () => {
     if (step === 1) {
       if (classType === "kids") {
-        // Para kids, validar tutor y datos del alumno
         if (!tutorData.name.trim()) {
           setNameError(true)
           return
@@ -279,7 +271,6 @@ export default function FormWizard() {
           setStudentAgeError(true)
           return
         }
-        // Crear estudiante para kids
         const studentForKids = {
           name: tutorData.studentName,
           age: tutorData.studentAge,
@@ -288,10 +279,9 @@ export default function FormWizard() {
           weekdays: [],
         }
         setStudents([studentForKids])
-        setStep(4) // Ir directo a instrumentos
+        setStep(4)
         return
       } else {
-        // Para individual y grupal, validar nombre principal
         if (!mainName.trim()) {
           setNameError(true)
           return
@@ -300,64 +290,84 @@ export default function FormWizard() {
     }
 
     if (step === 3) {
-      // Validar nombre solo si no es la primera persona cuando isForSelf es true
-      const needsName = !(isForSelf && currentStudent === 0)
-      if (needsName && !students[currentStudent]?.name?.trim()) {
+      const currentStudent = getCurrentStudent()
+      const needsName = !(isForSelf && !tempPerson && students.length === 1)
+
+      if (needsName && !currentStudent.name?.trim()) {
         setNameError(true)
         return
       }
-      if (!students[currentStudent]?.age) {
+      if (!currentStudent.age) {
         setAgeError(true)
         return
       }
     }
 
     if (step === 8) {
-      // Validar solo nombre y edad para persona del mismo grupo
-      if (!students[currentStudent]?.name?.trim()) {
+      // Validar datos para persona del mismo grupo
+      if (!tempPerson?.name?.trim()) {
         setNameError(true)
         return
       }
-      if (!students[currentStudent]?.age) {
+      if (!tempPerson?.age) {
         setAgeError(true)
         return
       }
-      // Ir DIRECTO a la etapa final (paso 7) sin mostrar opciones
-      setStep(7)
-      setShowAddPerson(false) // No mostrar opciones, ir directo al resumen
+      // Confirmar y agregar la persona
+      confirmAddPerson()
       return
     }
 
     if (step === 6) {
-      // Después de completar días
-      if (classType === "group") {
-        // Si es la primera persona del grupo, mostrar opciones de agregar
-        if (currentStudent === 0 && !groupMode) {
-          setShowAddPerson(true)
-          setStep(7)
-        } else {
-          // Si es una persona adicional (mismo o diferente grupo), ir directo al resumen
-          setStep(7)
-          setShowAddPerson(false)
-        }
-      } else {
-        setStep(7)
+      // Si estamos agregando una persona a otro grupo, confirmarla
+      if (addingPersonMode === "different" && tempPerson) {
+        confirmAddPerson()
+        return
       }
+
+      // Si es clase grupal y es la primera persona, mostrar opciones
+      if (classType === "group" && !addingPersonMode && students.length === 1) {
+        setShowAddPerson(true)
+        setStep(7)
+        return
+      }
+
+      // En otros casos, ir al resumen
+      setStep(7)
       return
     }
 
     setStep(step + 1)
   }
 
-  // Función para retroceder al paso anterior
   const prevStep = () => {
     if (step > 0) {
-      // Si estamos en el paso 8 (agregar persona mismo grupo), volver al resumen
       if (step === 8) {
+        // Si estamos agregando persona del mismo grupo, volver al resumen
+        setTempPerson(null)
+        setAddingPersonMode(null)
         setStep(7)
         setShowAddPerson(true)
         return
       }
+
+      // Si estamos agregando una persona a otro grupo (paso 3-6 con addingPersonMode "different")
+      if (addingPersonMode === "different") {
+        if (step === 3) {
+          // Si estamos en el paso 3 agregando persona a otro grupo, volver al resumen
+          setTempPerson(null)
+          setAddingPersonMode(null)
+          setStep(7)
+          setShowAddPerson(true)
+          return
+        } else {
+          // Para otros pasos del flujo "different", retroceder normalmente
+          setStep(step - 1)
+          return
+        }
+      }
+
+      // Para el flujo normal, retroceder un paso
       setStep(step - 1)
     }
   }
@@ -440,8 +450,18 @@ export default function FormWizard() {
 
   // Función para detectar si debe mostrar info de menores
   const shouldShowKidsInfo = () => {
-    const currentAge = Number.parseInt(students[currentStudent]?.age || "0")
+    const currentStudent = getCurrentStudent()
+    const currentAge = Number.parseInt(currentStudent.age || "0")
     return currentAge > 0 && currentAge <= 8
+  }
+
+  // Función para agregar persona basada en la elección previa
+  const addPersonBasedOnPreviousChoice = () => {
+    if (lastChosenMode === "same") {
+      addPersonSameGroup()
+    } else if (lastChosenMode === "different") {
+      addPersonNewGroup()
+    }
   }
 
   // Renderizado condicional según el paso actual
@@ -450,22 +470,14 @@ export default function FormWizard() {
       case 0:
         return (
           <div className="space-y-6">
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-6">
               <Image
                 src="/images/underground-logo.png"
                 alt="Underground Music School"
-                width={180}
-                height={60}
-                className="h-auto"
+                width={350}
+                height={120}
+                className="h-auto w-full max-w-sm"
               />
-            </div>
-
-            <div className="text-center space-y-2 mb-6">
-              <p className="text-sm text-gray-600">General Paz 274 • Lunes a Viernes</p>
-              <p className="text-sm text-gray-600">Secretaría: 18 a 21hs • +54 2657 65-9078</p>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
-                <p className="text-sm font-medium text-yellow-800">Inscripción anual: $15.000</p>
-              </div>
             </div>
 
             <h2 className="text-xl font-bold text-center mb-6">Elegí tu modalidad de clase:</h2>
@@ -480,21 +492,7 @@ export default function FormWizard() {
                   <div>
                     <p className="font-bold">Clase Grupal (hasta 3 personas)</p>
                     <p className="text-sm opacity-90">1 hora • 1 vez por semana</p>
-                    <p className="text-lg font-bold mt-1">$30.000/mes</p>
-                  </div>
-                </div>
-              </Button>
-
-              <Button
-                variant={classType === "kids" ? "default" : "outline"}
-                className={`w-full h-auto p-4 ${classType === "kids" ? "bg-[#01b302] hover:bg-[#01ef4a]" : ""}`}
-                onClick={() => handleClassTypeSelect("kids")}
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div>
-                    <p className="font-bold">Individual Niños (4 a 8 años)</p>
-                    <p className="text-sm opacity-90">30 minutos • 1 vez por semana</p>
-                    <p className="text-lg font-bold mt-1">$36.000/mes</p>
+                    <p className="text-lg font-bold mt-1">$32.000/mes</p>
                   </div>
                 </div>
               </Button>
@@ -508,7 +506,21 @@ export default function FormWizard() {
                   <div>
                     <p className="font-bold">Individual</p>
                     <p className="text-sm opacity-90">1 hora • 1 vez por semana</p>
-                    <p className="text-lg font-bold mt-1">$50.000/mes</p>
+                    <p className="text-lg font-bold mt-1">$55.000/mes</p>
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant={classType === "kids" ? "default" : "outline"}
+                className={`w-full h-auto p-4 ${classType === "kids" ? "bg-[#01b302] hover:bg-[#01ef4a]" : ""}`}
+                onClick={() => handleClassTypeSelect("kids")}
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div>
+                    <p className="font-bold">Individual Niños (4 a 8 años)</p>
+                    <p className="text-sm opacity-90">30 minutos • 1 vez por semana</p>
+                    <p className="text-lg font-bold mt-1">$39.000/mes</p>
                   </div>
                 </div>
               </Button>
@@ -516,12 +528,12 @@ export default function FormWizard() {
 
             <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mt-6">
               <div className="text-center space-y-2">
-                <h3 className="text-lg font-bold text-green-800 flex items-center justify-center gap-2">
-                  CLASES PERSONALIZADAS
-                </h3>
+                <h3 className="text-lg font-bold text-green-800">CLASES PERSONALIZADAS</h3>
                 <p className="text-sm text-green-700 leading-relaxed">
-                  Adaptadas a las edades y gustos musicales de cada alumno
+                  Guitarra / Canto / Batería / Piano / Armónica / Bajo / Ukelele
                 </p>
+                <p className="text-xs text-green-600">( adaptado a edades y gustos musicales )</p>
+                <p className="text-lg">🎸🥁🎹🪘🪕🎤🎶</p>
               </div>
             </div>
           </div>
@@ -626,8 +638,7 @@ export default function FormWizard() {
                 onClick={() => handleForSelfSelect(true)}
               >
                 <div className="flex flex-col items-center">
-                  <span>🙋‍♂️</span>
-                  <span>Para mí</span>
+                  <span>🙋‍♂️ Para mí</span>
                 </div>
               </Button>
               <Button
@@ -636,8 +647,7 @@ export default function FormWizard() {
                 onClick={() => handleForSelfSelect(false)}
               >
                 <div className="flex flex-col items-center">
-                  <span>👤</span>
-                  <span>Para otra persona</span>
+                  <span>👤 Para otra persona</span>
                 </div>
               </Button>
             </div>
@@ -645,22 +655,14 @@ export default function FormWizard() {
         )
 
       case 3:
+        const currentStudent = getCurrentStudent()
         return (
           <div className="space-y-6">
-            {students.length > 1 && (
-              <div className="mb-4">
-                <Progress value={((currentStudent + 1) / students.length) * 100} className="h-2 bg-gray-200" />
-                <p className="text-center text-sm mt-1">
-                  Persona {currentStudent + 1} de {students.length}
-                </p>
-              </div>
-            )}
-
             <h2 className="text-2xl font-bold text-center">
-              {isForSelf && currentStudent === 0
+              {isForSelf && !tempPerson && students.length === 1
                 ? "¿Cuál es tu edad?"
-                : students.length > 1
-                  ? `Datos de la persona ${currentStudent + 1}`
+                : addingPersonMode
+                  ? `Datos de la nueva persona`
                   : "Datos del estudiante"}
             </h2>
 
@@ -668,7 +670,7 @@ export default function FormWizard() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
                   💡 Para menores de 8 años (inclusive), recomendamos la modalidad "Individual Niños" de 30 minutos por
-                  $36.000/mes
+                  $39.000/mes
                 </p>
               </div>
             )}
@@ -677,13 +679,13 @@ export default function FormWizard() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
                   💡 Para menores de 8 años (inclusive), recomendamos la modalidad "Individual Niños" de 30 minutos por
-                  $36.000/mes en lugar de grupal
+                  $39.000/mes en lugar de grupal
                 </p>
               </div>
             )}
 
             <div className="space-y-4">
-              {!(isForSelf && currentStudent === 0) && (
+              {!(isForSelf && !tempPerson && students.length === 1) && (
                 <div className="space-y-2">
                   <Label htmlFor="studentName" className="flex items-center">
                     Nombre: <span className="text-red-500 ml-1">*</span>
@@ -691,7 +693,7 @@ export default function FormWizard() {
                   <Input
                     id="studentName"
                     placeholder="Nombre de la persona"
-                    value={students[currentStudent]?.name || ""}
+                    value={currentStudent.name || ""}
                     onChange={(e) => updateCurrentStudent({ name: e.target.value })}
                     className={nameError ? "border-red-500 focus:border-red-500" : ""}
                   />
@@ -707,7 +709,7 @@ export default function FormWizard() {
                   id="studentAge"
                   placeholder="Edad"
                   type="number"
-                  value={students[currentStudent]?.age || ""}
+                  value={currentStudent.age || ""}
                   onChange={(e) => updateCurrentStudent({ age: e.target.value })}
                   className={ageError ? "border-red-500 focus:border-red-500" : ""}
                 />
@@ -718,17 +720,9 @@ export default function FormWizard() {
         )
 
       case 4:
+        const currentStudentInstruments = getCurrentStudent()
         return (
           <div className="space-y-6">
-            {students.length > 1 && (
-              <div className="mb-4">
-                <Progress value={((currentStudent + 1) / students.length) * 100} className="h-2 bg-gray-200" />
-                <p className="text-center text-sm mt-1">
-                  Persona {currentStudent + 1} de {students.length}
-                </p>
-              </div>
-            )}
-
             <h2 className="text-2xl font-bold text-center">¿Qué instrumento querés aprender? 🎸</h2>
             <p className="text-center text-gray-600">Podés seleccionar varios</p>
 
@@ -743,12 +737,13 @@ export default function FormWizard() {
               ].map((instrument) => (
                 <div
                   key={instrument.id}
-                  className={`border rounded-lg p-4 flex flex-col items-center cursor-pointer transition-all ${(classType === "kids" ? students[0]?.instruments : students[currentStudent]?.instruments)?.includes(
-                    instrument.value,
-                  )
+                  className={`border rounded-lg p-4 flex flex-col items-center cursor-pointer transition-all ${
+                    (classType === "kids" ? students[0]?.instruments : currentStudentInstruments.instruments)?.includes(
+                      instrument.value,
+                    )
                       ? "border-[#01b302] bg-[#01ef4a]/10"
                       : "border-gray-200 hover:border-[#01ef4a]"
-                    }`}
+                  }`}
                   onClick={() => toggleInstrument(instrument.value)}
                 >
                   <span>{instrument.label}</span>
@@ -759,17 +754,9 @@ export default function FormWizard() {
         )
 
       case 5:
+        const currentStudentTimes = getCurrentStudent()
         return (
           <div className="space-y-6">
-            {students.length > 1 && (
-              <div className="mb-4">
-                <Progress value={((currentStudent + 1) / students.length) * 100} className="h-2 bg-gray-200" />
-                <p className="text-center text-sm mt-1">
-                  Persona {currentStudent + 1} de {students.length}
-                </p>
-              </div>
-            )}
-
             <h2 className="text-2xl font-bold text-center">¿En qué horario preferís? ⏰</h2>
             <p className="text-center text-gray-600">Podés seleccionar varios</p>
 
@@ -781,13 +768,14 @@ export default function FormWizard() {
               ].map((time) => (
                 <div
                   key={time.id}
-                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${(classType === "kids"
+                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${
+                    (classType === "kids"
                       ? students[0]?.timePreferences
-                      : students[currentStudent]?.timePreferences
+                      : currentStudentTimes.timePreferences
                     )?.includes(time.value)
                       ? "border-[#01b302] bg-[#01ef4a]/10"
                       : "border-gray-200 hover:border-[#01ef4a]"
-                    }`}
+                  }`}
                   onClick={() => toggleTimePreference(time.value)}
                 >
                   <span>{time.label}</span>
@@ -798,18 +786,10 @@ export default function FormWizard() {
         )
 
       case 6:
+        const currentStudentDays = getCurrentStudent()
         return (
           <div className="space-y-6">
-            {students.length > 1 && (
-              <div className="mb-4">
-                <Progress value={((currentStudent + 1) / students.length) * 100} className="h-2 bg-gray-200" />
-                <p className="text-center text-sm mt-1">
-                  Persona {currentStudent + 1} de {students.length}
-                </p>
-              </div>
-            )}
-
-            <h2 className="text-2xl font-bold text-center">¿Qué días te convienen? 📅</h2>
+            <h2 className="text-2xl font-bold text-center">¿Qué días tenés libres? 📅</h2>
             <p className="text-center text-gray-600">Podés seleccionar varios</p>
 
             <div className="space-y-3">
@@ -822,19 +802,17 @@ export default function FormWizard() {
               ].map((day) => (
                 <div
                   key={day.id}
-                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${(classType === "kids" ? students[0]?.weekdays : students[currentStudent]?.weekdays)?.includes(
-                    day.value,
-                  )
+                  className={`border rounded-lg p-4 flex items-center cursor-pointer transition-all ${
+                    (classType === "kids" ? students[0]?.weekdays : currentStudentDays.weekdays)?.includes(day.value)
                       ? "border-[#01b302] bg-[#01ef4a]/10"
                       : "border-gray-200 hover:border-[#01ef4a]"
-                    }`}
+                  }`}
                   onClick={() => toggleWeekday(day.value)}
                 >
                   <Checkbox
-                    checked={(classType === "kids"
-                      ? students[0]?.weekdays
-                      : students[currentStudent]?.weekdays
-                    )?.includes(day.value)}
+                    checked={(classType === "kids" ? students[0]?.weekdays : currentStudentDays.weekdays)?.includes(
+                      day.value,
+                    )}
                     className="mr-3"
                   />
                   <span>{day.label}</span>
@@ -847,21 +825,10 @@ export default function FormWizard() {
       case 7:
         return (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center">¡Perfecto! 🎉</h2>
+            
 
-            {/* Mensaje mejorado de horario de secretaría */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-4">
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <h3 className="text-lg font-semibold text-blue-800">Tiempo de respuesta ⏰</h3>
-                </div>
-                <p className="text-blue-700 font-medium">Te contestaremos en el horario de secretaría</p>
-                <p className="text-blue-600 text-sm">📞 Lunes a Viernes de 18 a 21hs</p>
-              </div>
-            </div>
-
-            {/* Solo mostrar opciones la primera vez (cuando groupMode es null Y currentStudent es 0) */}
-            {classType === "group" && showAddPerson && !groupMode && currentStudent === 0 && students.length < 3 && (
+            {/* Mostrar opciones de agregar persona solo si es clase grupal, no hay modo activo y hay menos de 3 personas */}
+            {classType === "group" && showAddPerson && !addingPersonMode && students.length < 3 && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold text-center">¿Querés agregar otra persona?</h3>
                 <div className="space-y-3">
@@ -881,9 +848,19 @@ export default function FormWizard() {
               </div>
             )}
 
-            {/* SIEMPRE mostrar resumen y botón WhatsApp cuando NO está en modo agregar O cuando ya completó una persona adicional */}
-            {(!showAddPerson || (classType === "group" && currentStudent > 0)) && (
+            {/* Mostrar resumen cuando no está en modo agregar */}
+            {!showAddPerson && (
               <>
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-4">
+                  <div className="text-center space-y-2">
+                    <h3 className="text-lg font-bold text-blue-800">¡PERFECTO! 🎉</h3>
+                    <p className="text-blue-700 font-medium">
+                      Te responderemos personalmente para informarte de cupos disponibles en el horario de secretaría:
+                    </p>
+                    <p className="text-blue-600 text-sm font-semibold">📞 Lunes a Viernes de 18 a 21hs</p>
+                  </div>
+                </div>
+
                 <p className="text-center text-gray-600">Resumen de tu consulta:</p>
 
                 <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
@@ -928,23 +905,30 @@ export default function FormWizard() {
                   ))}
                 </div>
 
-                {/* Botón para agregar otra persona (solo si no está en el límite) */}
+                {/* Botones para agregar más personas si es clase grupal y hay menos de 3 */}
                 {classType === "group" && students.length < 3 && (
-                  <Button
-                    onClick={() => {
-                      if (groupMode === "same") {
-                        addPersonSameGroup()
-                      } else if (groupMode === "different") {
-                        addPersonNewGroup()
-                      } else {
-                        setShowAddPerson(true)
-                      }
-                    }}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    Agregar otra persona
-                  </Button>
+                  <div className="space-y-2">
+                    {/* Si ya eligió una modalidad antes, mostrar solo un botón */}
+                    {lastChosenMode ? (
+                      <Button
+                        onClick={addPersonBasedOnPreviousChoice}
+                        variant="outline"
+                        className="w-full bg-transparent"
+                      >
+                        Agregar otra persona
+                      </Button>
+                    ) : (
+                      /* Si nunca eligió, mostrar ambos botones */
+                      <>
+                        <Button onClick={addPersonSameGroup} variant="outline" className="w-full bg-transparent">
+                          Agregar otra persona al mismo grupo
+                        </Button>
+                        <Button onClick={addPersonNewGroup} variant="outline" className="w-full bg-transparent">
+                          Agregar otra persona a otro grupo
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 )}
 
                 <div className="flex justify-center">
@@ -976,7 +960,7 @@ export default function FormWizard() {
                 <Input
                   id="newPersonName"
                   placeholder="Nombre de la persona"
-                  value={students[currentStudent]?.name || ""}
+                  value={tempPerson?.name || ""}
                   onChange={(e) => updateCurrentStudent({ name: e.target.value })}
                   className={nameError ? "border-red-500 focus:border-red-500" : ""}
                 />
@@ -991,7 +975,7 @@ export default function FormWizard() {
                   id="newPersonAge"
                   placeholder="Edad"
                   type="number"
-                  value={students[currentStudent]?.age || ""}
+                  value={tempPerson?.age || ""}
                   onChange={(e) => updateCurrentStudent({ age: e.target.value })}
                   className={ageError ? "border-red-500 focus:border-red-500" : ""}
                 />
@@ -1020,7 +1004,7 @@ export default function FormWizard() {
           />
         </div>
 
-        {/*<h2 className="text-2xl font-bold text-center">UNDERGROUND 🎵</h2>*/}
+        
         <p className="text-center font-medium">Escuela de Música y Salas de Ensayo</p>
 
         <div className="space-y-3">
@@ -1075,7 +1059,6 @@ export default function FormWizard() {
         </div>
 
         <div className="flex justify-between items-center gap-4 flex-1 ml-4">
-          {/* CORREGIR: Incluir explícitamente el paso 8 */}
           {(step === 1 ||
             (step === 2 && (classType === "individual" || classType === "group")) ||
             step === 3 ||
@@ -1083,47 +1066,36 @@ export default function FormWizard() {
             step === 5 ||
             step === 6 ||
             step === 8) && (
-              <Button
-                onClick={() => {
-                  if (step === 6) {
-                    if (classType === "group") {
-                      setShowAddPerson(true)
-                      setStep(7)
-                    } else {
-                      setStep(7)
-                    }
-                  } else {
-                    nextStep()
-                  }
-                }}
-                className="bg-[#01b302] hover:bg-[#01ef4a] hover:text-black h-10 ml-auto"
-                disabled={
-                  (step === 1 &&
-                    classType === "kids" &&
-                    (!tutorData.name || !tutorData.studentName || !tutorData.studentAge)) ||
-                  (step === 1 && classType !== "kids" && !mainName) ||
-                  (step === 3 &&
-                    ((!(isForSelf && currentStudent === 0) && !students[currentStudent]?.name) ||
-                      !students[currentStudent]?.age)) ||
-                  (step === 8 && (!students[currentStudent]?.name || !students[currentStudent]?.age)) ||
-                  (step === 4 &&
-                    (classType === "kids"
-                      ? (students[0]?.instruments?.length || 0) === 0
-                      : (students[currentStudent]?.instruments?.length || 0) === 0)) ||
-                  (step === 5 &&
-                    (classType === "kids"
-                      ? (students[0]?.timePreferences?.length || 0) === 0
-                      : (students[currentStudent]?.timePreferences?.length || 0) === 0)) ||
-                  (step === 6 &&
-                    (classType === "kids"
-                      ? (students[0]?.weekdays?.length || 0) === 0
-                      : (students[currentStudent]?.weekdays?.length || 0) === 0))
-                }
-              >
-                {step === 6 ? "Finalizar" : step === 8 ? "Aceptar" : "Siguiente"}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              onClick={nextStep}
+              className="bg-[#01b302] hover:bg-[#01ef4a] hover:text-black h-10 ml-auto"
+              disabled={
+                (step === 1 &&
+                  classType === "kids" &&
+                  (!tutorData.name || !tutorData.studentName || !tutorData.studentAge)) ||
+                (step === 1 && classType !== "kids" && !mainName) ||
+                (step === 3 &&
+                  ((!(isForSelf && !tempPerson && students.length === 1) && !getCurrentStudent().name?.trim()) ||
+                    !getCurrentStudent().age)) ||
+                (step === 8 && (!tempPerson?.name || !tempPerson?.age)) ||
+                (step === 4 &&
+                  (classType === "kids"
+                    ? (students[0]?.instruments?.length || 0) === 0
+                    : (getCurrentStudent().instruments?.length || 0) === 0)) ||
+                (step === 5 &&
+                  (classType === "kids"
+                    ? (students[0]?.timePreferences?.length || 0) === 0
+                    : (getCurrentStudent().timePreferences?.length || 0) === 0)) ||
+                (step === 6 &&
+                  (classType === "kids"
+                    ? (students[0]?.weekdays?.length || 0) === 0
+                    : (getCurrentStudent().weekdays?.length || 0) === 0))
+              }
+            >
+              {step === 6 ? "Finalizar" : step === 8 ? "Aceptar" : "Siguiente"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
     )
